@@ -22,7 +22,7 @@ function Heatmap({ dates }: HeatmapProps) {
   
   return <CalendarHeatmap
           endDate={new Date(max * msPerDay)}
-          numDays={max - min}
+          numDays={1 + max - min}
           values={ 
             Object.keys(counts).map(ms => ({
               date: new Date(parseInt(ms, 10) * msPerDay),
@@ -33,7 +33,7 @@ function Heatmap({ dates }: HeatmapProps) {
             if (!record) {
               return 'color-empty';
             }
-            const scaled = (Math.round(record.count / maxCount) * 6) + 1;
+            const scaled = Math.round(6 * record.count / maxCount) + 1;
             return `color-scale-${scaled}`;
           }}
         />; 
@@ -41,7 +41,16 @@ function Heatmap({ dates }: HeatmapProps) {
 
 class AppState {
   datesText: string;
+  dates: Date[];
+  error: string;
 }
+
+const exampleDates = `2011-11-04
+2012-06-02
+2012-06-02
+2012-06-02
+2013-01-18
+2013-01-18`
 
 class App extends React.Component<{}, AppState> {
 
@@ -49,35 +58,53 @@ class App extends React.Component<{}, AppState> {
     super();
 
     this.state = {
-      datesText: `2011-11-04
-2012-06-02
-2012-06-02
-2012-06-02
-2013-01-18
-2013-01-18`
+      datesText: exampleDates,
+      dates: [],
+      error: ""
     };
+
+    Object.assign(this.state, this.parseDatesText(exampleDates));
+  }
+
+  parseDatesText(datesText: string) {
+
+    const dates: Date[] = [],
+          errors: string[] = [];
+    
+    let lineNumber = 1;
+    for (const text of datesText.trim().split('\n')) {
+      const date = new Date(text);
+      if (!isNaN(date.getTime())) {
+        dates.push(date);
+      } else {
+        errors.push(`Invalid date on line ${lineNumber}: ${text}`);
+      }
+      lineNumber++;
+    }
+        
+    return { dates, error: errors.join("\n") };
   }
 
   setDatesText(ev: React.ChangeEvent<HTMLTextAreaElement>) {
-    this.setState({
-      datesText: ev.target.value
-    });    
+    const datesText = ev.target.value || "";
+    this.setState({ datesText })
+    this.setState(this.parseDatesText(datesText));
   }
 
   render() {
-
-    var dates = this.state.datesText
-                  .split('\n')
-                  .map(line => new Date(line));
-
     return (
       <div className="App">
-
-        <Heatmap dates={dates} />
-
-        <textarea value={this.state.datesText}
-          onChange={ev => this.setDatesText(ev)} />
-          
+        <div className="result">
+          <div className="border scrollable">
+            <Heatmap dates={this.state.dates} />
+            <pre className="error">{this.state.error}</pre>
+          </div>
+        </div>
+        <div className="dates">
+          <div className="border nonscrollable">
+            <textarea value={this.state.datesText} onChange={ev => this.setDatesText(ev)} />
+          </div>
+        </div>
       </div>
     );
   }
